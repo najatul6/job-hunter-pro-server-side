@@ -1,7 +1,7 @@
 const express = require('express');
 const app = express();
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion,ObjectId } = require('mongodb');
 const port = process.env.PORT || 5000;
 require('dotenv').config();
 
@@ -34,10 +34,24 @@ async function run() {
             res.send(result)
         })
 
+        // ALL Job collection create 
+        app.post('/api/v1/alljobs', async(req, res)=>{
+            const query = req.body;
+            const result = await jobCollection.insertOne(query)
+            res.send(result)
+        })
+
         // Applied Job collection create 
         app.post('/api/v1/user/allappliedjobs', async(req, res)=>{
             const newapplication = req.body;
             const result = await appliedCollection.insertOne(newapplication)
+            res.send(result)
+        })
+
+        // Delete from all job collection 
+        app.delete('/api/v1/user/cancel-job/:id', async(req, res)=>{
+            const id = req.params.id;
+            const result = await jobCollection.deleteOne({_id: new ObjectId(id)})
             res.send(result)
         })
 
