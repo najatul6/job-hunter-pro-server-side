@@ -7,7 +7,12 @@ require('dotenv').config();
 
 // MiddleWare 
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+    origin: [
+        'http://localhost:5173'
+    ],
+    credentials: true
+}));
 
 
 
@@ -32,37 +37,77 @@ async function run() {
         const appliedCollection = client.db('jobhunterproDB').collection('allappliedjobs')
         const userCollection = client.db('jobhunterproDB').collection('allUsers')
 
-        app.get('/allJobs', async(req,res)=>{
+        app.get('/allJobs', async (req, res) => {
             const keyword = req.query.keyword;
+            const userEmail = req.query.userEmail;
             let query = {}
-            if(keyword){
-                 query = { jobTitle: { $regex: new RegExp(keyword, 'i') }}
+            if (keyword) {
+                query = { jobTitle: { $regex: new RegExp(keyword, 'i') } }
             }
-            // console.log(keyword)
+            console.log(req.baseUrl)
+            if (userEmail) {
+                query = { useremail: userEmail }
+            }
             const cursor = jobCollection.find(query);
             const result = await cursor.toArray();
             res.send(result)
         })
 
-        app.get('/allJobs/:id', async(req,res)=>{
+        app.get('/allJobs/:id', async (req, res) => {
             const id = req.params.id;
-            const query = {_id: new ObjectId(id)};
+            const query = { _id: new ObjectId(id) };
             const result = await jobCollection.findOne(query)
             res.send(result)
         })
 
+        // New Jobs ADD
+        app.post('/allJobs', async (req, res) => {
+            const newjob = req.body;
+            const result = await jobCollection.insertOne(newjob)
+            res.send(result)
+        })
+
         // Applyed 
-        app.post('/allappliedjobs', async(req, res)=>{
+        app.post('/allappliedjobs', async (req, res) => {
+
             const appliedjob = req.body;
             console.log(appliedjob)
+            const filter = {_id : new ObjectId(appliedjob?.JobID)}
+            const updatedData = {
+                $set:{
+                    jobApplicantNumber : appliedjob?.serialNumber
+                }
+            }
+            const updatedResult = await jobCollection.updateOne(filter, updatedData)
+            const result = await appliedCollection.insertOne(appliedjob)
+            res.send(result)
         })
 
         //All User
-        app.post('/allusers', async(req, res)=>{
+        app.post('/allusers', async (req, res) => {
             const newUser = req.body;
-            console.log(newUser);
             const result = await userCollection.insertOne(newUser)
             res.send(result)
+        })
+
+        // Update User 
+        app.put('/alljobs/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const body = req.body
+            const updatedDate = {
+                $set: {
+                    jobTitle: body.jobTitle,
+                    pictureURL: body.pictureURL,
+                    salaryRange: body.salaryRange,
+                    jobDescription: body.jobDescription,
+                    jobCategory: body.jobCategory,
+                    jobPostingDate:body.jobPostingDate, 
+                    applicationDeadline:body.applicationDeadline,
+                }
+            }
+            const resutl = await jobCollection.updateOne(query, updatedDate)
+            res.send(resutl)
         })
 
         // Send a ping to confirm a successful connection
